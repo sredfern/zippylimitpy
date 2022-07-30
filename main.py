@@ -486,4 +486,3 @@ while True:
     s1.goto(int(throttle_scaled)*1024) # Push scaled servo value on 1024 base. 
     # print("raw: ",r,"decrease:",per_decrease," output: ",throttle_scaled, "min, max, mid", min, max, mid)
     time.sleep(0.001)
- 
