@@ -266,6 +266,12 @@ class Servo:
         """
         self.__pwm.duty_u16(0)
 
+
+#
+# Digit object
+dig = seven()
+dig.off()
+
 #
 # Filesystem tools 
 #
@@ -292,17 +298,11 @@ def readCalibration():
         dig.sign("error")
         time.sleep(2)
         calibrate()
-        return
     f = open('cal.json')
     values = json.loads(f.read())
     print(values)
     f.close()
-    global max
-    max = values['max']
-    global min
-    min = values['min']
-    global mid
-    mid = values['mid']
+    return [values['min'], values['max'], values['mid']]
 #
 # Calibrate function
 #
@@ -323,7 +323,6 @@ def calibrate():
             if pin_button.value() == 0 and calibrate_stage == 2:
                 global max
                 max = avg_calculator()
-                print(avg_calculator())
                 calibrate_stage = 3
         if calibrate_stage in (3,4):
             dig.sign("low")
@@ -332,7 +331,6 @@ def calibrate():
             if pin_button.value() == 0 and calibrate_stage == 4:
                 global min 
                 min = avg_calculator()
-                print(avg_calculator())
                 calibrate_stage = 5
         if calibrate_stage in (5,6):
             dig.sign("mid")
@@ -341,7 +339,6 @@ def calibrate():
             if pin_button.value() == 0 and calibrate_stage == 6:
                 global mid
                 mid = avg_calculator()
-                print(avg_calculator())
                 print("min: ",min," max: ",max," mid: ",mid)
                 start_calibrate = False
                 dig.off()
@@ -359,6 +356,7 @@ def avg_calculator():
         baton.acquire()
         r = result
         baton.release()
+        # print(mov_avg_array)
         mov_avg_array.append(r)
         if flip == True:
             dig.sign('bus1')
@@ -367,9 +365,15 @@ def avg_calculator():
             dig.sign('bus2')
             flip = True
         time.sleep(0.03)
-    calcValue = round(sum(mov_avg_array)/(max_array_size+1),0)
+    calcValue = round(sum(mov_avg_array)/(max_array_size),0)
     print("calibrated value: ",calcValue)
     return int(calcValue)
+
+#
+#
+# Consisten R value grabber
+# def get_position():
+    
 
 #
 # Servo Value Reader
@@ -430,22 +434,14 @@ start_write = False
 start_press_time = utime.ticks_ms()
 
 #Starter variables
-min = 0
-max = 0
-mid = 0
-
-#
-# Digit object
-dig = seven()
-dig.off()
+[min, max, mid] = readCalibration()
 
 while True:
     baton.acquire()
     r = result
     baton.release()
-    while min == 0 or max == 0 or mid == 0:
-        readCalibration()
-    # catch for Calibrate or write functions
+    if r == 0:
+        dig.sign('error')
     if start_calibrate == True and pin_button.value() == 0:
         calibrate()
     if start_write == True and pin_button.value() == 0:
@@ -481,8 +477,9 @@ while True:
     per_decrease = round(1.0*pot_value/65535,2) # Turn to percentage
     throttle_out = ((r-mid)*per_decrease)+mid # Remove mid read from throttle read. Apply percent change then re-add mid.
     throttle_scaled = (throttle_out-min)/(max-min) #Re-scale throttle value to within the min-max envolope. 
-    if pin_button.value() == 0 and button_latch == False: # Display current decrease value
+    throttle_goto = throttle_scaled*900
+    if pin_button.value() == 0 and button_latch == False and r != 0: # Display current decrease value
         dig.number(int(per_decrease*10))
-    s1.goto(int(throttle_scaled)*1024) # Push scaled servo value on 1024 base. 
-    # print("raw: ",r,"decrease:",per_decrease," output: ",throttle_scaled, "min, max, mid", min, max, mid)
-    time.sleep(0.001)
+    s1.goto(throttle_goto) # Push scaled servo value on 1024 base. 
+    # print("throttle_out: ",throttle_out,"r value: ",r,"throttle_scaled:",throttle_scaled," output: ",int(throttle_goto), "min, max, mid", min, max, mid)
+    time.sleep(0.01)
