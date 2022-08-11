@@ -1,6 +1,6 @@
 # Zippy Speed Limiter
 
-This project allows you to scale an RC Radio throttle value. It's useful if you have a simpler RC radio car and want to slow it down for kids.
+This project allows you to scale an RC Radio throttle value. Great if you've got an RC car that you'd like to slow down for kids.
 
 Features
 - Single button interface
